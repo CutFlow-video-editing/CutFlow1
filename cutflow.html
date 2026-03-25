@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CutFlow — Video Editing, Reimagined</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #080808;
+    --white: #f5f2eb;
+    --cream: #e8e2d5;
+    --accent: #ff3d2e;
+    --accent2: #ffb800;
+    --mid: #2a2a2a;
+    --subtle: #444;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s, background 0.2s;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(255,61,46,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all 0.15s ease;
+  }
+  body:has(a:hover) .cursor, body:has(button:hover) .cursor { width: 20px; height: 20px; background: var(--accent2); }
+  body:has(a:hover) .cursor-ring, body:has(button:hover) .cursor-ring { width: 52px; height: 52px; border-color: var(--accent2); }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 24px 48px;
+    mix-blend-mode: normal;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--white);
+    text-decoration: none;
+  }
+  .logo span { color: var(--accent); }
+  .nav-cta {
+    background: transparent;
+    border: 1px solid rgba(245,242,235,0.3);
+    color: var(--white);
+    padding: 10px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: none;
+    transition: all 0.3s;
+  }
+  .nav-cta:hover { background: var(--accent); border-color: var(--accent); }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 120px 48px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 50%, rgba(255,61,46,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 20% 80%, rgba(255,184,0,0.05) 0%, transparent 60%);
+  }
+
+  .hero-ticker {
+    position: absolute; top: 50%; left: 0; right: 0;
+    transform: translateY(-50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(120px, 18vw, 260px);
+    color: rgba(255,255,255,0.025);
+    white-space: nowrap;
+    letter-spacing: -2px;
+    user-select: none;
+    animation: ticker 18s linear infinite;
+  }
+  @keyframes ticker { from { transform: translateY(-50%) translateX(0); } to { transform: translateY(-50%) translateX(-50%); } }
+
+  .hero-tag {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  .hero-headline {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(64px, 10vw, 148px);
+    line-height: 0.92;
+    letter-spacing: -1px;
+    max-width: 900px;
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.4s forwards;
+  }
+
+  .hero-headline em {
+    font-style: normal;
+    color: var(--accent);
+    position: relative;
+    display: inline-block;
+  }
+
+  .hero-sub {
+    margin-top: 36px;
+    font-size: 18px;
+    font-weight: 300;
+    color: rgba(245,242,235,0.6);
+    max-width: 480px;
+    line-height: 1.65;
+    position: relative; z-index: 2;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.6s forwards;
+  }
+
+  .hero-actions {
+    margin-top: 52px;
+    display: flex; align-items: center; gap: 32px;
+    position: relative; z-index: 2;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.8s forwards;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--white);
+    border: none;
+    padding: 18px 42px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: none;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--accent2);
+    transform: translateX(-101%);
+    transition: transform 0.4s cubic-bezier(0.77,0,0.175,1);
+  }
+  .btn-primary:hover::after { transform: translateX(0); }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .hero-note { font-size: 13px; color: rgba(245,242,235,0.35); }
+
+  /* Scroll indicator */
+  .scroll-line {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; animation: fadeUp 0.8s 1.2s forwards;
+  }
+  .scroll-line span { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+  .scroll-line::after {
+    content: '';
+    width: 1px; height: 60px;
+    background: linear-gradient(to bottom, rgba(255,61,46,0.8), transparent);
+    animation: pulse-line 2s ease-in-out infinite;
+  }
+  @keyframes pulse-line { 0%,100% { opacity: 0.4; transform: scaleY(1); } 50% { opacity: 1; transform: scaleY(1.1); } }
+
+  /* Stats bar */
+  .stats-bar {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    padding: 0 48px;
+  }
+  .stat {
+    padding: 48px 0;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .stat:last-child { border-right: none; padding-left: 48px; }
+  .stat:nth-child(2) { padding-left: 48px; }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 64px;
+    color: var(--white);
+    line-height: 1;
+  }
+  .stat-num span { color: var(--accent); }
+  .stat-label { font-size: 13px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+
+  /* How it works */
+  .section { padding: 120px 48px; }
+  .section-label {
+    font-size: 11px; letter-spacing: 5px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: 0.95;
+    max-width: 700px;
+  }
+
+  .steps {
+    margin-top: 80px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+  }
+  .step {
+    background: var(--mid);
+    padding: 52px 40px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .step:hover { background: #333; }
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 96px;
+    color: rgba(255,255,255,0.05);
+    line-height: 1;
+    position: absolute; top: 20px; right: 24px;
+  }
+  .step-icon {
+    width: 48px; height: 48px;
+    border: 1px solid rgba(255,61,46,0.4);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 28px;
+    color: var(--accent);
+    font-size: 20px;
+  }
+  .step h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .step p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; }
+
+  /* Services */
+  .services-section { padding: 0 48px 120px; }
+  .services-grid {
+    margin-top: 64px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+  }
+  .service-card {
+    background: var(--mid);
+    padding: 48px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+  .service-card::before {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.77,0,0.175,1);
+  }
+  .service-card:hover::before { transform: scaleX(1); }
+  .service-card:hover { background: #2f2f2f; }
+  .service-tag {
+    display: inline-block;
+    background: rgba(255,61,46,0.15);
+    color: var(--accent);
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 14px;
+    margin-bottom: 24px;
+  }
+  .service-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px; letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .service-card p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; max-width: 360px; }
+  .service-price {
+    margin-top: 32px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--accent2);
+    letter-spacing: 2px;
+  }
+
+  /* Waitlist */
+  .waitlist-section {
+    background: var(--accent);
+    padding: 120px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .waitlist-section::before {
+    content: 'JOIN';
+    position: absolute; right: -40px; top: 50%; transform: translateY(-50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 320px;
+    color: rgba(0,0,0,0.1);
+    pointer-events: none;
+    line-height: 1;
+  }
+  .waitlist-inner { max-width: 640px; position: relative; z-index: 2; }
+  .waitlist-section .section-label { color: rgba(0,0,0,0.5); }
+  .waitlist-section .section-title { color: var(--black); }
+
+  .waitlist-form {
+    margin-top: 52px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .form-row { display: flex; gap: 12px; }
+  .form-input {
+    background: rgba(0,0,0,0.12);
+    border: 1px solid rgba(0,0,0,0.2);
+    color: var(--black);
+    padding: 16px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input::placeholder { color: rgba(0,0,0,0.4); }
+  .form-input:focus { border-color: var(--black); }
+  .form-select {
+    background: rgba(0,0,0,0.12);
+    border: 1px solid rgba(0,0,0,0.2);
+    color: var(--black);
+    padding: 16px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    cursor: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .btn-waitlist {
+    background: var(--black);
+    color: var(--white);
+    border: none;
+    padding: 20px 48px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: none;
+    margin-top: 8px;
+    transition: all 0.3s;
+    align-self: flex-start;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-waitlist::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--accent2);
+    transform: translateX(-101%);
+    transition: transform 0.4s cubic-bezier(0.77,0,0.175,1);
+  }
+  .btn-waitlist:hover::after { transform: translateX(0); }
+  .btn-waitlist:hover { color: var(--black); }
+  .btn-waitlist span { position: relative; z-index: 1; }
+
+  .success-msg {
+    display: none;
+    margin-top: 24px;
+    background: rgba(0,0,0,0.15);
+    border: 1px solid rgba(0,0,0,0.2);
+    padding: 20px 28px;
+    color: var(--black);
+    font-size: 15px;
+  }
+  .success-msg strong { font-weight: 500; display: block; margin-bottom: 4px; font-size: 17px; }
+  .success-msg.show { display: block; animation: fadeUp 0.5s forwards; }
+
+  /* Counter */
+  .waitlist-counter {
+    margin-top: 28px;
+    font-size: 13px;
+    color: rgba(0,0,0,0.5);
+  }
+  .waitlist-counter strong { color: var(--black); font-weight: 500; }
+
+  /* Footer */
+  footer {
+    padding: 48px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  footer .logo { font-size: 22px; }
+  .footer-note { font-size: 13px; color: rgba(255,255,255,0.2); }
+  .footer-links { display: flex; gap: 32px; }
+  .footer-links a { font-size: 13px; color: rgba(255,255,255,0.3); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; }
+  .footer-links a:hover { color: var(--white); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    nav { padding: 20px 24px; }
+    .hero { padding: 100px 24px 80px; }
+    .stats-bar { grid-template-columns: 1fr; padding: 0 24px; }
+    .stat { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 36px 0; }
+    .stat:last-child { padding-left: 0; }
+    .stat:nth-child(2) { padding-left: 0; }
+    .section, .services-section { padding: 80px 24px; }
+    .steps { grid-template-columns: 1fr; }
+    .services-grid { grid-template-columns: 1fr; }
+    .form-row { flex-direction: column; }
+    .waitlist-section { padding: 80px 24px; }
+    footer { flex-direction: column; gap: 24px; text-align: center; }
+    .footer-links { flex-wrap: wrap; justify-content: center; }
+    body { cursor: auto; }
+    .cursor, .cursor-ring { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">Cut<span>Flow</span></a>
+  <button class="nav-cta" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">Join Waitlist</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-ticker">CUTFLOW CUTFLOW CUTFLOW CUTFLOW CUTFLOW CUTFLOW &nbsp;</div>
+
+  <p class="hero-tag">Professional Video Editing Service</p>
+  <h1 class="hero-headline">Your Vision.<br><em>Our Cut.</em><br>Delivered.</h1>
+  <p class="hero-sub">Fast, high-quality video editing for creators, brands, and agencies. Upload your footage — we handle the rest.</p>
+  <div class="hero-actions">
+    <button class="btn-primary" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">
+      <span>Get Early Access</span>
+    </button>
+    <span class="hero-note">Free for first 50 signups</span>
+  </div>
+  <div class="scroll-line"><span>Scroll</span></div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-num">24<span>h</span></div>
+    <div class="stat-label">Average turnaround time</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">4<span>K</span></div>
+    <div class="stat-label">Max export resolution</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">∞</div>
+    <div class="stat-label">Revisions until you're happy</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <p class="section-label">The Process</p>
+  <h2 class="section-title">Three Steps to a Finished Video</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon">↑</div>
+      <h3>Upload Your Footage</h3>
+      <p>Drop your raw clips, audio files, and any reference material through our secure upload portal. Add a brief and we're off.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon">✂</div>
+      <h3>We Edit</h3>
+      <p>Our editors get to work — cutting, colour grading, adding music, transitions, and graphics. You'll get a preview within 24 hours.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon">✓</div>
+      <h3>Review & Download</h3>
+      <p>Give feedback, request revisions, then download your final export in any format — 4K, vertical, square, whatever you need.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="services-section">
+  <p class="section-label">What We Edit</p>
+  <h2 class="section-title">Every Format, Every Platform</h2>
+  <div class="services-grid">
+    <div class="service-card">
+      <div class="service-tag">Social</div>
+      <h3>Reels & Short-Form</h3>
+      <p>Punchy, platform-optimised edits for Instagram, TikTok, and YouTube Shorts. Hooks, captions, trending pacing — all included.</p>
+      <div class="service-price">From €49 / video</div>
+    </div>
+    <div class="service-card">
+      <div class="service-tag">Brand</div>
+      <h3>Brand & Promo Videos</h3>
+      <p>Product launches, brand stories, testimonials. Polished, professional, and on-brand. Colour graded to your palette.</p>
+      <div class="service-price">From €199 / video</div>
+    </div>
+    <div class="service-card">
+      <div class="service-tag">Creator</div>
+      <h3>YouTube & Long-Form</h3>
+      <p>Full episode edits with intros, chapters, B-roll, text overlays, and thumbnail delivery. Monthly plans available.</p>
+      <div class="service-price">From €129 / video</div>
+    </div>
+    <div class="service-card">
+      <div class="service-tag">Events</div>
+      <h3>Event Highlights</h3>
+      <p>Conferences, weddings, launches. We turn hours of footage into a highlight reel people will actually watch.</p>
+      <div class="service-price">From €249 / event</div>
+    </div>
+  </div>
+</section>
+
+<!-- WAITLIST -->
+<section class="waitlist-section" id="waitlist">
+  <div class="waitlist-inner">
+    <p class="section-label">Early Access</p>
+    <h2 class="section-title">Be First in Line</h2>
+    <p style="margin-top: 20px; color: rgba(0,0,0,0.6); font-size: 15px; line-height: 1.65;">
+      CutFlow is launching soon. Join the waitlist and get a free first edit, priority onboarding, and locked-in founder pricing.
+    </p>
+
+    <form class="waitlist-form" id="waitlistForm" onsubmit="handleSubmit(event)">
+      <div class="form-row">
+        <input class="form-input" type="text" placeholder="First name" id="firstName" required>
+        <input class="form-input" type="text" placeholder="Last name" id="lastName" required>
+      </div>
+      <input class="form-input" type="email" placeholder="Email address" id="email" required>
+      <select class="form-select" id="useCase">
+        <option value="" disabled selected>What do you mainly create?</option>
+        <option>Social media content</option>
+        <option>YouTube / long-form</option>
+        <option>Brand / marketing videos</option>
+        <option>Events & weddings</option>
+        <option>Documentaries & films</option>
+        <option>Something else</option>
+      </select>
+      <button type="submit" class="btn-waitlist"><span>Claim My Spot →</span></button>
+    </form>
+
+    <div class="success-msg" id="successMsg">
+      <strong>You're on the list! 🎬</strong>
+      We'll be in touch as soon as we open the doors. Keep an eye on your inbox.
+    </div>
+
+    <div class="waitlist-counter" id="waitlistCounter">
+      <strong id="spotsLeft">47</strong> of 50 early-access spots remaining
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="logo">Cut<span>Flow</span></a>
+  <div class="footer-links">
+    <a href="#">Instagram</a>
+    <a href="#">Twitter</a>
+    <a href="#">Contact</a>
+  </div>
+  <p class="footer-note">© 2026 CutFlow. All rights reserved.</p>
+</footer>
+
+<script>
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+    setTimeout(() => {
+      ring.style.left = e.clientX + 'px';
+      ring.style.top = e.clientY + 'px';
+    }, 80);
+  });
+
+  // Waitlist
+  let spots = 47;
+  const signups = JSON.parse(localStorage.getItem('cf_signups') || '[]');
+
+  function updateCounter() {
+    const remaining = Math.max(0, 50 - signups.length);
+    document.getElementById('spotsLeft').textContent = remaining;
+    if (remaining === 0) {
+      document.getElementById('waitlistCounter').innerHTML = '<strong>All early-access spots claimed!</strong> You\'ll be on the general waitlist.';
+    }
+  }
+  updateCounter();
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const first = document.getElementById('firstName').value;
+    const last = document.getElementById('lastName').value;
+    const email = document.getElementById('email').value;
+    const use = document.getElementById('useCase').value;
+
+    if (signups.find(s => s.email === email)) {
+      alert("You're already on the list! We'll be in touch soon.");
+      return;
+    }
+
+    signups.push({ first, last, email, use, date: new Date().toISOString() });
+    localStorage.setItem('cf_signups', JSON.stringify(signups));
+
+    document.getElementById('waitlistForm').style.display = 'none';
+    const msg = document.getElementById('successMsg');
+    msg.innerHTML = `<strong>You're on the list, ${first}! 🎬</strong>We'll email you at ${email} as soon as we open the doors.`;
+    msg.classList.add('show');
+    updateCounter();
+  }
+
+  // Scroll animations
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.step, .service-card, .stat').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(32px)';
+    el.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+    observer.observe(el);
+  });
+
+  // Stagger step animations
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.style.transitionDelay = `${i * 0.12}s`;
+  });
+  document.querySelectorAll('.service-card').forEach((el, i) => {
+    el.style.transitionDelay = `${i * 0.1}s`;
+  });
+</script>
+</body>
+</html>
